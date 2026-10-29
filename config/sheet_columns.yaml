@@ -1,0 +1,28 @@
+# Logical field -> column header in the worksheet. Rename the right-hand side to match your sheet.
+# Columns are matched by header name, so column order does not matter. Missing optional columns are skipped.
+columns:
+  name: "Name"
+  phone: "phone_number"
+  email: "Email"
+  do_not_call: "Do Not Call"          # optional; any of yes/true/1/y marks the customer as DNC
+  call_status: "Call Status"
+  call_datetime: "Call Datetime"
+  call_count: "Call Count"
+  transcript: "Transcript"
+  summary: "Summary"
+  recording_url: "Call Recording"
+  meeting_preference: "Meeting Preference"
+  meeting_availability: "Meeting Availability"
+  meeting_status: "Meeting Status"
+  callback_time: "Callback Time"
+  next_attempt_at: "Next Attempt"
+  reminder_email_date: "reminder_email_date"
+
+# One column per entry in business.yaml `requirements` (key -> header). Keys without a column are skipped.
+requirement_columns:
+  product_interest: "Product Interest"
+  use_case: "Use Case"
+  scale: "Scale"
+  budget: "Budget"
+  timeline: "Timeline"
+  current_setup: "Current Setup"

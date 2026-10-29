@@ -1,0 +1,40 @@
+# Business rules. Edit freely; no code change needed. Times are in the app TIMEZONE (Asia/Kolkata by default).
+calling_hours:
+  start: "09:00"
+  end: "19:00"
+  days: [mon, tue, wed, thu, fri, sat]
+
+daily_run:            # scheduled outbound calling run
+  hour: 9
+  minute: 50
+
+calls:
+  max_attempts: 3             # stop calling a customer after this many attempts
+  min_gap_minutes: 120        # never re-dial the same customer sooner than this
+  batch_limit: 50             # max customers dialled per run
+  pause_between_calls_seconds: 5
+  default_country: IN         # for phone numbers given without a country code
+
+# What to do after each customer outcome. delay is measured from the call; the slot is then moved into `window`.
+retry:
+  not_received:  {enabled: true, delay_minutes: 1440, window: {start: "10:00", end: "11:00"}}
+  not_responded: {enabled: true, delay_minutes: 1440, window: {start: "10:00", end: "11:00"}}
+  ended:         {enabled: true, delay_minutes: 1440, window: {start: "10:00", end: "11:00"}}
+
+callback:             # customer asked to be called back
+  default_delay_minutes: 60   # used when the requested time cannot be understood
+  min_lead_minutes: 10
+  max_days_ahead: 14
+
+meeting:
+  reminders_minutes_before: [1440, 60]
+
+post_call:
+  poll_attempts: 6            # waits for provider post-call processing (transcript/summary)
+  poll_interval_seconds: 10
+  reconcile_after_minutes: 10 # poll the provider for calls whose webhook never arrived
+  dialing_unknown_after_minutes: 10
+  stale_task_minutes: 15      # re-queue tasks stuck in "running" (e.g. crash)
+
+notifications:
+  enabled_kinds: [missed_call, not_responded, disconnected, callback_confirmation, meeting_confirmation, meeting_reminder]

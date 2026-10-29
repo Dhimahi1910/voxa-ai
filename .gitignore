@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# local project tooling
+.venv-tools/
+*.sqlite3

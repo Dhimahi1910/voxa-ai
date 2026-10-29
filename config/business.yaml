@@ -1,0 +1,18 @@
+# Everything business-specific lives here (and in system_prompt.md / email_templates.yaml). No code change needed.
+company_name: voxai
+agent_name: Veesha
+company_phone: ""        # shown in emails; fill in
+company_website: ""      # shown in emails; fill in
+# EDIT the description below: it gives the analysis model context and is inserted into the voice agent prompt.
+business_description: >-
+  voxai provides AI voice agent solutions to businesses.
+
+# Facts the agent should learn during the call. The LLM fills these; they become spreadsheet columns
+# (see requirement_columns in sheet_columns.yaml). Add, remove or rename freely.
+requirements:
+  - {key: product_interest, label: Product Interest, description: "Which product or service the customer is interested in"}
+  - {key: use_case,         label: Use Case,         description: "What they want to achieve or use it for"}
+  - {key: scale,            label: Scale,            description: "Size or volume of requirement as stated (e.g. number of users, units, capacity)"}
+  - {key: budget,           label: Budget,           description: "Budget range if the customer mentioned one"}
+  - {key: timeline,         label: Timeline,         description: "When they plan to start or buy"}
+  - {key: current_setup,    label: Current Setup,    description: "What they use or have in place today"}

@@ -1,0 +1,51 @@
+# Placeholders: $name, $company_name, $agent_name, $company_phone, $company_website, $callback_time, $meeting_time, $meeting_mode, $next_attempt
+signature: |
+  Warm regards,
+  $agent_name | $company_name
+
+templates:
+  missed_call:
+    subject: "We tried reaching you — $company_name"
+    body: |
+      Dear $name,
+
+      Our team tried to reach you today, but the call was not answered.
+      $next_attempt
+      If you would like to reach us first, contact us at $company_phone $company_website.
+  not_responded:
+    subject: "We connected but couldn't hear you — $company_name"
+    body: |
+      Dear $name,
+
+      Our team connected with you today, but we were unable to hear a response.
+      $next_attempt
+      If you prefer a different time, reach us at $company_phone $company_website.
+  disconnected:
+    subject: "Our call got disconnected — $company_name"
+    body: |
+      Dear $name,
+
+      Our call ended before we could finish our conversation.
+      $next_attempt
+      Questions in the meantime? Contact us at $company_phone $company_website.
+  callback_confirmation:
+    subject: "Talk to you soon — $company_name"
+    body: |
+      Dear $name,
+
+      Thank you for taking our call. As agreed, our team will call you again $callback_time.
+      If you need to reach us sooner, contact us at $company_phone $company_website.
+  meeting_confirmation:
+    subject: "Your meeting with $company_name is confirmed"
+    body: |
+      Dear $name,
+
+      Thank you for speaking with us. Your $meeting_mode meeting with our team is scheduled for $meeting_time.
+      If you need to change it, contact us at $company_phone $company_website.
+  meeting_reminder:
+    subject: "Reminder: your meeting with $company_name"
+    body: |
+      Dear $name,
+
+      This is a reminder of your $meeting_mode meeting with our team on $meeting_time.
+      Need to reschedule? Contact us at $company_phone $company_website.
