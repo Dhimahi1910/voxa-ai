@@ -51,5 +51,10 @@ class CallDetailOut(CallOut):
     transcript: str | None
 
 
+class CallListItem(CallOut):
+    customer_name: str = ""
+    customer_phone: str = ""
+
+
 class JobTriggerRequest(BaseModel):
     job: str = Field(pattern="^(calling_run|due_tasks|reconcile_calls)$")

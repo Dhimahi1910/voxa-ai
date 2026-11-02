@@ -84,3 +84,24 @@ async def test_webhook_unknown_call_ignored_and_known_call_idempotent(client, sv
 async def test_trigger_job_runs_and_is_authenticated(client, sv):
     r = await client.post("/api/jobs/trigger", json={"job": "due_tasks"}, headers={"x-api-key": "adminkey"})
     assert r.status_code == 200 and r.json()["job"] == "due_tasks"
+
+
+async def test_dashboard_and_call_list(client, sv, sessions):
+    from app.models import Customer
+    from app.schemas.call import ProviderCall
+    from app.workflows import calling_workflow as cw
+    from tests.conftest import NOW
+    from app.core import timeutil
+    c = await make_customer(sessions)
+    sv.voice.details["c1"] = ProviderCall(provider_call_id="c1", status="no-answer", finished=True, answered=False)
+    async with sessions() as s:
+        await cw.place_call(sv, s, await s.get(Customer, c.id), "k", "manual", now=NOW)
+    h = {"x-api-key": "adminkey"}
+    d = (await client.get("/api/dashboard", headers=h)).json()
+    assert d["totals"]["customers"] == 1 and d["company"] == "voxai" and d["switches"]["real_calls"] is True
+    lst = (await client.get(f"/api/calls?customer_id={c.id}", headers=h)).json()
+    assert lst[0]["customer_name"] == "Asha" and lst[0]["customer_phone"] == c.phone
+    assert (await client.get("/api/calls?outcome=Connected", headers=h)).json() == []
+    assert (await client.get("/api/customers?q=asha", headers=h)).json()[0]["id"] == c.id
+    assert (await client.get("/api/customers?q=zzz", headers=h)).json() == []
+    assert (await client.get("/api/dashboard")).status_code == 401

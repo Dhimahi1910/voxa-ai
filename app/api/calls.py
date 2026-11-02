@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_services
@@ -12,7 +12,7 @@ from app.core.security import require_api_key
 from app.db import get_session
 from app.repositories import call_repository as calls
 from app.repositories import customer_repository as customers
-from app.schemas.call import CallDetailOut, CallOut, StartCallRequest
+from app.schemas.call import CallDetailOut, CallListItem, CallOut, StartCallRequest
 from app.workflows import calling_workflow
 
 router = APIRouter(prefix="/api/calls", tags=["calls"], dependencies=[Depends(require_api_key)])
@@ -37,6 +37,15 @@ async def start_call(body: StartCallRequest, sv: Services = Depends(get_services
         return await calls.get(session, res.call_id)
     code = {"skipped": 422, "outside_hours": 409, "duplicate": 409, "failed": 502, "unknown": 502}[res.status]
     raise HTTPException(code, res.detail or res.status)
+
+
+@router.get("", response_model=list[CallListItem])
+async def list_calls(customer_id: int | None = None, outcome: str | None = Query(None, max_length=30),
+                     limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                     session: AsyncSession = Depends(get_session)):
+    rows = await calls.list_calls(session, customer_id, outcome, limit, offset)
+    return [CallListItem.model_validate(c).model_copy(update={"customer_name": cu.name, "customer_phone": cu.phone})
+            for c, cu in rows]
 
 
 @router.get("/{call_id}", response_model=CallDetailOut)

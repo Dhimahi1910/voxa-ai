@@ -1,0 +1,54 @@
+# Voxa AI (personal project). Fully independent of any other Docker project on this machine:
+# own project name, network, volume and credentials. Always run from this folder.
+#   docker compose up -d --build     docker compose stop     docker compose ps
+# NEVER use `down -v` (it would delete the database volume).
+name: voxai-personal
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env.docker            # POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB
+    ports:
+      - "127.0.0.1:5433:5432"        # loopback only: for TablePlus, not reachable from the network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env                   # app settings (optional)
+        required: false
+      - .env.docker                  # last, so its DATABASE_URL (pointing at the `postgres` service) wins
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3001:80"
+
+volumes:
+  postgres_data:

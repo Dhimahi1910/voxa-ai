@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,8 +18,12 @@ async def get_by_phone(session: AsyncSession, phone: str) -> Customer | None:
     return (await session.execute(select(Customer).where(Customer.phone == phone))).scalar_one_or_none()
 
 
-async def list_customers(session: AsyncSession, limit: int = 50, offset: int = 0) -> Sequence[Customer]:
-    q = select(Customer).order_by(Customer.id).limit(limit).offset(offset)
+async def list_customers(session: AsyncSession, limit: int = 50, offset: int = 0, search: str | None = None) -> Sequence[Customer]:
+    q = select(Customer)
+    if search:
+        like = f"%{search.strip()}%"
+        q = q.where(or_(Customer.name.ilike(like), Customer.phone.ilike(like), Customer.email.ilike(like)))
+    q = q.order_by(Customer.id).limit(limit).offset(offset)
     return (await session.execute(q)).scalars().all()
 
 
@@ -70,3 +74,11 @@ async def upsert_from_sheet(session: AsyncSession, rows: Sequence[SheetCustomer]
         out.append(c)
     await session.commit()
     return out
+
+
+async def count_customers(session: AsyncSession) -> int:
+    return (await session.execute(select(func.count()).select_from(Customer))).scalar_one()
+
+
+async def count_dnc(session: AsyncSession) -> int:
+    return (await session.execute(select(func.count()).select_from(DoNotCall))).scalar_one()

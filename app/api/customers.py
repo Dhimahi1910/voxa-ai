@@ -16,8 +16,8 @@ router = APIRouter(prefix="/api", tags=["customers"], dependencies=[Depends(requ
 
 @router.get("/customers", response_model=list[CustomerOut])
 async def list_customers(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
-                         session: AsyncSession = Depends(get_session)):
-    return await customers.list_customers(session, limit, offset)
+                         q: str | None = Query(None, max_length=100), session: AsyncSession = Depends(get_session)):
+    return await customers.list_customers(session, limit, offset, q)
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerOut)

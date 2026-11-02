@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.timeutil import utcnow
-from app.models import Call, WebhookEvent
+from app.models import Call, Customer, WebhookEvent
 from app.models.enums import CallState
 
 IN_FLIGHT = (CallState.PENDING.value, CallState.DIALING.value, CallState.INITIATED.value)
@@ -61,3 +61,24 @@ async def record_webhook_event(session: AsyncSession, event_key: str, payload: d
     except IntegrityError:
         await session.rollback()
         return False
+
+
+async def list_calls(session: AsyncSession, customer_id: int | None = None, outcome: str | None = None,
+                     limit: int = 50, offset: int = 0) -> list[tuple[Call, Customer]]:
+    q = select(Call, Customer).join(Customer, Customer.id == Call.customer_id)
+    if customer_id is not None:
+        q = q.where(Call.customer_id == customer_id)
+    if outcome:
+        q = q.where(Call.outcome == outcome)
+    q = q.order_by(Call.created_at.desc(), Call.id.desc()).limit(limit).offset(offset)
+    return [(c, cu) for c, cu in (await session.execute(q)).all()]
+
+
+async def outcome_counts_since(session: AsyncSession, since: datetime) -> dict[str, int]:
+    q = select(Call.outcome, func.count()).where(Call.created_at >= since).group_by(Call.outcome)
+    return {(o or "Pending"): n for o, n in (await session.execute(q)).all()}
+
+
+async def failed_since(session: AsyncSession, since: datetime) -> int:
+    q = select(func.count()).where(Call.created_at >= since, Call.state.in_((CallState.FAILED.value, CallState.UNKNOWN.value)))
+    return (await session.execute(q)).scalar_one()

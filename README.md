@@ -65,6 +65,44 @@ curl -H "x-api-key: devkey" localhost:8000/api/customers
 
 Calls only happen inside `calling_hours` (default 09:00–19:00 IST, Mon–Sat); outside them a run places nothing.
 
+## Frontend (React + Vite) — `frontend/`
+
+Screens: **Dashboard** (today's calls by outcome, upcoming callbacks/retries/reminders, meetings, safety-switch states) and
+**Customers** (search, status, per-customer call history with transcript, summary, requirements, recording link).
+Sign in with one of the `API_KEYS` from `.env`; the key is kept in `sessionStorage` for the tab only.
+
+```bash
+cd frontend && npm install
+npm run dev        # http://localhost:5173, proxies /api to the backend on 127.0.0.1:8000
+npm run build      # outputs frontend/dist; the backend then serves it at / (single process, same origin)
+```
+Node is not installed system-wide on the dev machine; a project-local copy lives in `.venv-tools/node` (git-ignored).
+Read-only for now: starting calls, triggering jobs and editing the DNC list are available through the API but not yet in the UI.
+
+## Docker (isolated personal setup)
+
+`compose.yaml` runs Postgres, the backend and the nginx frontend as the Compose project **`voxai-personal`**, with its own network,
+volume (`voxai-personal_postgres_data`) and credentials. It does not reference any other Docker project. Always run from this folder.
+
+| Service | Host address | Notes |
+|---|---|---|
+| Frontend (nginx) | http://127.0.0.1:3001 | proxies `/api` and `/health` to the backend |
+| Backend (FastAPI) | http://127.0.0.1:8001 | runs `alembic upgrade head` on start |
+| PostgreSQL 16 | 127.0.0.1:5433 | database `voxai`, user `voxai_app`; loopback only |
+
+```bash
+cp .env.docker.example .env.docker      # then set a strong password (same value in DATABASE_URL); .env.docker is git-ignored
+docker compose up -d --build            # start (only this project's services)
+docker compose ps                       # status
+docker compose logs -f backend          # logs
+docker compose stop                     # stop, data kept     (docker compose start to resume)
+docker compose exec backend python -m app.cli seed --name "Test" --phone 9876543210 --email t@example.com
+docker compose exec backend python -m app.cli run calling_run     # dry run: nothing is dialled
+```
+**Never run `docker compose down -v`** (deletes the database volume). App settings come from `.env`; `.env.docker` overrides
+`DATABASE_URL` so the backend uses the `postgres` service. TablePlus: host `127.0.0.1`, port `5433`, database `voxai`,
+user `voxai_app`, password from `.env.docker`.
+
 ## Safety switches (all default OFF)
 
 | Variable | Effect when off |

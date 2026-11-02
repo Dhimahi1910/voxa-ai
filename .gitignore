@@ -222,3 +222,6 @@ __marimo__/
 # local project tooling
 .venv-tools/
 *.sqlite3
+
+# Docker credentials (never commit)
+.env.docker
