@@ -9,7 +9,8 @@ from app.core.phone import normalize_phone
 from app.core.security import require_api_key
 from app.db import get_session
 from app.repositories import customer_repository as customers
-from app.schemas.customer import CustomerOut, DncRequest
+from app.models import Customer
+from app.schemas.customer import CustomerCreate, CustomerOut, DncOut, DncRequest
 
 router = APIRouter(prefix="/api", tags=["customers"], dependencies=[Depends(require_api_key)])
 
@@ -26,6 +27,35 @@ async def get_customer(customer_id: int, session: AsyncSession = Depends(get_ses
     if c is None:
         raise HTTPException(404, "customer not found")
     return c
+
+
+@router.post("/customers", response_model=CustomerOut, status_code=201)
+async def create_customer(body: CustomerCreate, sv: Services = Depends(get_services),
+                          session: AsyncSession = Depends(get_session)):
+    """Add one customer by hand (customers normally come from the spreadsheet)."""
+    phone = normalize_phone(body.phone, sv.policy.calls.default_country)
+    if not phone:
+        raise HTTPException(422, "invalid phone number")
+    if await customers.get_by_phone(session, phone):
+        raise HTTPException(409, "a customer with this phone number already exists")
+    c = Customer(phone=phone, name=body.name.strip(), email=body.email.strip())
+    session.add(c)
+    await session.commit()
+    return c
+
+
+@router.get("/dnc", response_model=list[DncOut])
+async def list_dnc(session: AsyncSession = Depends(get_session)):
+    return await customers.list_dnc(session)
+
+
+@router.delete("/dnc", status_code=204)
+async def remove_dnc(phone: str = Query(max_length=20), sv: Services = Depends(get_services),
+                     session: AsyncSession = Depends(get_session)):
+    """Remove a number from the do-not-call list. Use only when the customer has asked to be contacted again."""
+    normalized = normalize_phone(phone, sv.policy.calls.default_country)
+    if not normalized or not await customers.remove_dnc(session, normalized):
+        raise HTTPException(404, "number is not on the do-not-call list")
 
 
 @router.post("/dnc", status_code=204)

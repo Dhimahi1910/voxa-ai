@@ -82,3 +82,7 @@ async def count_customers(session: AsyncSession) -> int:
 
 async def count_dnc(session: AsyncSession) -> int:
     return (await session.execute(select(func.count()).select_from(DoNotCall))).scalar_one()
+
+
+async def list_dnc(session: AsyncSession) -> Sequence[DoNotCall]:
+    return (await session.execute(select(DoNotCall).order_by(DoNotCall.created_at.desc()))).scalars().all()

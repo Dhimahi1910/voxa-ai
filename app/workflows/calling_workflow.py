@@ -30,6 +30,20 @@ MAX_TECH_RETRIES = 2
 MAX_PROCESS_ATTEMPTS = 6
 
 
+SKIP_TEXT = {
+    "do_not_call": "On the do-not-call list",
+    "max_attempts": "Already used all allowed call attempts",
+    "meeting_scheduled": "A meeting is already booked",
+    "call_in_progress": "A call to them is already in progress",
+    "followup_already_scheduled": "A retry or callback is already scheduled",
+    "already_contacted": "Already spoke with them; waiting on a person or a scheduled follow-up",
+    "called_recently": "Called too recently (minimum gap not passed)",
+    "outside_calling_hours": "Outside calling hours right now",
+    "batch_limit": "Over today's batch limit",
+    "duplicate_in_run": "Same phone number appears twice in this run",
+}
+
+
 # --------------------------------------------------------------------------------------------- selection
 @dataclass
 class EligibilityContext:
@@ -83,6 +97,9 @@ async def _context(sv: Services, session: AsyncSession, now: datetime) -> Eligib
         in_flight=await calls.in_flight_customer_ids(session),
         has_pending_call_task=await tasks.customers_with_pending(session, TaskKind.CALL),
     )
+
+
+eligibility_context = _context
 
 
 # --------------------------------------------------------------------------------------------- dialing

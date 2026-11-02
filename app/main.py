@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi.staticfiles import StaticFiles
 
-from app.api import calls, customers, dashboard, jobs, webhooks
+from app.api import calls, customers, dashboard, insights, jobs, settings, webhooks
 from app.container import build_services
 from app.core.config import get_settings
 from app.core.logging import setup_logging
@@ -41,7 +41,9 @@ app = FastAPI(title="Voice Calling Agent", lifespan=lifespan)
 app.include_router(calls.router)
 app.include_router(customers.router)
 app.include_router(dashboard.router)
+app.include_router(insights.router)
 app.include_router(jobs.router)
+app.include_router(settings.router)
 app.include_router(webhooks.router)
 
 

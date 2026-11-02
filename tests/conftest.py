@@ -120,3 +120,26 @@ async def make_customer(sessions, **kw) -> Customer:
         s.add(c)
         await s.commit()
         return c
+
+
+@pytest.fixture
+async def client(sv, sessions):
+    import httpx
+    from pydantic import SecretStr
+    from app.core.config import get_settings
+    from app.main import app
+    sv.settings.api_keys = SecretStr("adminkey")
+    sv.settings.webhook_secret = SecretStr("whsecret")
+    app.state.services = sv
+    app.dependency_overrides[get_settings] = lambda: sv.settings
+    from app.db import get_session
+
+    async def _session():
+        async with sessions() as s:
+            yield s
+    app.dependency_overrides[get_session] = _session
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+

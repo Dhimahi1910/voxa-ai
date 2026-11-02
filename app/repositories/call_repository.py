@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,14 +64,20 @@ async def record_webhook_event(session: AsyncSession, event_key: str, payload: d
 
 
 async def list_calls(session: AsyncSession, customer_id: int | None = None, outcome: str | None = None,
-                     limit: int = 50, offset: int = 0) -> list[tuple[Call, Customer]]:
-    q = select(Call, Customer).join(Customer, Customer.id == Call.customer_id)
+                     limit: int = 50, offset: int = 0, q: str | None = None,
+                     since: datetime | None = None) -> list[tuple[Call, Customer]]:
+    stmt = select(Call, Customer).join(Customer, Customer.id == Call.customer_id)
     if customer_id is not None:
-        q = q.where(Call.customer_id == customer_id)
+        stmt = stmt.where(Call.customer_id == customer_id)
     if outcome:
-        q = q.where(Call.outcome == outcome)
-    q = q.order_by(Call.created_at.desc(), Call.id.desc()).limit(limit).offset(offset)
-    return [(c, cu) for c, cu in (await session.execute(q)).all()]
+        stmt = stmt.where(Call.outcome == outcome)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(or_(Customer.name.ilike(like), Customer.phone.ilike(like)))
+    if since is not None:
+        stmt = stmt.where(Call.created_at >= since)
+    stmt = stmt.order_by(Call.created_at.desc(), Call.id.desc()).limit(limit).offset(offset)
+    return [(c, cu) for c, cu in (await session.execute(stmt)).all()]
 
 
 async def outcome_counts_since(session: AsyncSession, since: datetime) -> dict[str, int]:

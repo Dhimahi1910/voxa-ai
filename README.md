@@ -67,17 +67,20 @@ Calls only happen inside `calling_hours` (default 09:00–19:00 IST, Mon–Sat);
 
 ## Frontend (React + Vite) — `frontend/`
 
-Screens: **Dashboard** (today's calls by outcome, upcoming callbacks/retries/reminders, meetings, safety-switch states) and
-**Customers** (search, status, per-customer call history with transcript, summary, requirements, recording link).
-Sign in with one of the `API_KEYS` from `.env`; the key is kept in `sessionStorage` for the tab only.
+"Aurora Glass" console: dark navy with violet/teal glow, frosted-glass panels, a Three.js 3D orb that pulses with call activity
+(lazy-loaded; still frame for reduced-motion users; CSS fallback without WebGL).
 
-```bash
-cd frontend && npm install
-npm run dev        # http://localhost:5173, proxies /api to the backend on 127.0.0.1:8000
-npm run build      # outputs frontend/dist; the backend then serves it at / (single process, same origin)
-```
+- **Guided start:** a welcome from Veesha, a setup checklist that ticks itself off from your real state, a spotlight product tour (header "Tour" button), and milestone celebrations (confetti on the first call, conversation, callback, meeting and email).
+- **Dashboard:** today's calls by outcome, recent calls, customers, a read-only settings summary (never secrets), today's plan, upcoming retries/callbacks/reminders, meetings and achievements.
+- **Today's plan (`/plan`):** exactly who the next run would call, and a plain-English reason for everyone it would skip.
+- **Practice Room (`/practice`):** pick a customer persona and attempt number and see the conversation, what the system decides, the reasons, and the emails it would send. Uses the real analysis guardrails and follow-up rules; nothing is dialled, emailed or stored. Optional real-AI analysis if `LLM_API_KEY` is set.
+- **Customers:** search, add, import a CSV (validated preview first), "Call now", add to do-not-call, and a **Journey** tab: one timeline of calls, retries, emails, meetings, each with a "why".
+- **Calls (`/calls`):** filters, CSV export (formula-injection safe), outcome donut, dial-to-meeting funnel, calls-by-hour heatmap with a best-time hint, daily trend.
+- **Controls:** run jobs and manage the do-not-call list. Every action asks for confirmation and says whether the call is real or simulated.
+
+Sign in with one of the `API_KEYS` from `.env`; the key is kept in `sessionStorage` for the tab only. With Docker the UI is at http://127.0.0.1:3001.
+For frontend development without Docker: `cd frontend && npm install && npm run dev` (http://localhost:5173, proxies `/api` to 127.0.0.1:8000).
 Node is not installed system-wide on the dev machine; a project-local copy lives in `.venv-tools/node` (git-ignored).
-Read-only for now: starting calls, triggering jobs and editing the DNC list are available through the API but not yet in the UI.
 
 ## Docker (isolated personal setup)
 

@@ -8,24 +8,6 @@ from app.models import Call
 from tests.conftest import make_customer
 
 
-@pytest.fixture
-async def client(sv, sessions, monkeypatch):
-    from pydantic import SecretStr
-    sv.settings.api_keys = SecretStr("adminkey")
-    sv.settings.webhook_secret = SecretStr("whsecret")
-    app.state.services = sv
-    app.dependency_overrides[get_settings] = lambda: sv.settings
-    from app.db import get_session
-
-    async def _session():
-        async with sessions() as s:
-            yield s
-    app.dependency_overrides[get_session] = _session
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
-        yield c
-    app.dependency_overrides.clear()
-
-
 async def test_health_is_open(client):
     assert (await client.get("/health")).status_code == 200
 
@@ -105,3 +87,32 @@ async def test_dashboard_and_call_list(client, sv, sessions):
     assert (await client.get("/api/customers?q=asha", headers=h)).json()[0]["id"] == c.id
     assert (await client.get("/api/customers?q=zzz", headers=h)).json() == []
     assert (await client.get("/api/dashboard")).status_code == 401
+
+
+async def test_create_customer_and_dnc_lifecycle(client):
+    h = {"x-api-key": "adminkey"}
+    assert (await client.post("/api/customers", json={"name": "Ravi", "phone": "98765 43210", "email": "r@x.com"}, headers=h)).status_code == 201
+    dup = await client.post("/api/customers", json={"name": "Ravi2", "phone": "+919876543210"}, headers=h)
+    assert dup.status_code == 409
+    assert (await client.post("/api/customers", json={"name": "X", "phone": "12"}, headers=h)).status_code == 422
+    assert (await client.post("/api/customers", json={"name": "X", "phone": "9876500000", "email": "bad"}, headers=h)).status_code == 422
+    assert (await client.post("/api/customers", json={"name": "", "phone": "9876500000"}, headers=h)).status_code == 422
+
+    assert (await client.post("/api/dnc", json={"phone": "9876543210", "reason": "asked"}, headers=h)).status_code == 204
+    lst = (await client.get("/api/dnc", headers=h)).json()
+    assert lst[0]["phone"] == "+919876543210" and lst[0]["reason"] == "asked"
+    assert (await client.delete("/api/dnc?phone=9876543210", headers=h)).status_code == 204
+    assert (await client.delete("/api/dnc?phone=9876543210", headers=h)).status_code == 404
+    assert (await client.get("/api/dnc", headers=h)).json() == []
+    assert (await client.get("/api/dnc")).status_code == 401
+    assert (await client.delete("/api/dnc?phone=9876543210")).status_code == 401
+
+
+async def test_settings_endpoint_has_no_secrets_and_requires_key(client, sv):
+    assert (await client.get("/api/settings")).status_code == 401
+    r = await client.get("/api/settings", headers={"x-api-key": "adminkey"})
+    body = r.json()
+    assert body["business"]["company"] == "voxai" and body["calling"]["max_attempts"] == 3
+    assert set(body["integrations"]) == {"voice_provider", "google_sheets", "gmail", "llm", "webhook"}
+    assert all(isinstance(v, bool) for v in body["integrations"].values())
+    assert "adminkey" not in r.text and "whsecret" not in r.text
